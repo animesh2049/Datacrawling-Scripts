@@ -1,0 +1,6 @@
+############################################################################ This Part is For Getting Acess Token  ###################################################################################
+
+app_id=906737296072868                                  # App id of created app
+app_secret=1cd48b7e4bfb38aa92784dd73a44b2d3             # App secret of created app
+access_token_raw=`curl -s "https://graph.facebook.com/oauth/access_token?type=client_cred&client_id=$app_id&client_secret=$app_secret"`        # Acess token generated on the basis of app id and secret. It is raw because it is of format access_token = something 
+access_token=`echo $access_token_raw|cut -d "=" -f 2`             # Acess Token. This command takes the second field on the delimeter =

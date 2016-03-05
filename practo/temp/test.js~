@@ -1,0 +1,112 @@
+var fs = require("fs");
+var Nightmare = require("nightmare");
+var nightmare = Nightmare({show: false});
+var check = "";
+var data;
+var displayStatus, cardBlock, feedbackNumber; 
+var html;
+var doctorId, doctorName, reviewerName, reviewerTimeStamp, reviewerApproxTime, review, visitedFor;
+var jsdom = require("jsdom");
+var urls = [];
+var presentCounter = 0;
+
+function GetFeedBack(counter){
+	if (counter >= urls.length){
+		process.exit(0);
+	}
+	var tillhere = nightmare
+	    .goto(urls[counter])
+	    .wait(2000)
+	    .click("#reviewsNavLink")
+	    .wait(1000);
+	
+	for (var i = 0;i<9;i++){
+	    tillhere = tillhere.evaluate(function(){
+			var a = document.getElementById('reviewsTab');
+			var b = document.getElementsByClassName("review-card-sidebar");
+			var c = a.getElementsByClassName("btn btn-white next-page recommended-next-page");	
+			c[0].click()
+	    });
+	    tillhere.wait(1000);
+	};
+
+	tillhere.evaluate(function(){
+	    var id = document.getElementsByClassName("report-error-container form-overall")[0].getElementsByTagName("input")[2].value
+	    var a = document.getElementById('reviewsTab');
+	    var data = [id, a.innerHTML]
+	    return data;		
+	})
+    .end()
+    .then(function (result){
+		htmls = result;
+		jsdom.env(htmls[1], ["http://code.jquery.com/jquery.js"], function (err, window) {
+	    result = window.document.getElementsByClassName("my-reviews");
+	    len = result.length;
+	    for(var i = 0; i < len; i++){
+			feedbacks = result[i].getElementsByClassName("doctor-review-card");
+			len2 = feedbacks.length;
+			for(var j = 0; j < len2 ;j++){
+			    try{
+					id = htmls[0];
+			    }
+			    catch (error){
+					console.log(error);
+					id = "Not Available";
+			    }
+			    try{
+					reviewerName = feedbacks[j].getElementsByClassName("reviewer-name")[0].innerHTML.replace(/\<.*/g, "").replace(/\t|\n/g, "");
+			    }
+			    catch(err){
+					console.log(err);
+					reviewerName = "Not Available";
+			    }
+			    try {
+					reviewerTimeStamp = feedbacks[j].getElementsByClassName("reviewer-name")[0].getElementsByTagName("span")[0].getAttribute("datetime");
+			    }
+			    catch (err){
+					console.log(err);
+					reviewerTimeStamp = "Not Available";
+			    }
+			    try {
+					reviewerApproxTime = feedbacks[j].getElementsByClassName("reviewer-name")[0].getElementsByTagName("span")[0].innerHTML;
+			    }
+			    catch (err){
+					console.log(err);
+					reviewerApproxTime = "Not Available";
+			    }
+			    try {
+					visitedFor = feedbacks[j].getElementsByClassName("visited-for")[0].innerHTML.replace(/\<.*/g, "").replace(/\t|\n/g, "");
+			    }
+			    catch (err){
+					console.log(err);
+					visitedFor = "Not Available";
+			    }
+			    try {
+					review = feedbacks[j].getElementsByClassName("less-review")[0].innerHTML.replace(/\<.*/g, "").replace(/\t|\n/g, "");
+			    }
+			    catch (err){
+					console.log(err);
+					review = "Not Available";
+			    }
+			    data = id + "\t" + reviewerName + "\t" + reviewerTimeStamp + "\t" + reviewerApproxTime + "\t" + visitedFor + "\t" + review + "\n";
+			    fs.appendFile("/home/animesh/crawl/practo/temp/outputfiles/tempfiles/feedback_test.tsv", data, function (err) {
+			    	if (err){
+			    		console.log(err);
+			    	}
+			    	GetFeedBack(counter+1);
+			    })
+			}
+		})
+	    });
+}
+
+fs.readFile("/home/animesh/crawl/practo/temp/inputfiles/clinicurls", "utf-8", function (err,data){
+    if (err) throw err;
+    data = data.split("\n");
+    var len = data.length;
+    for(var i=0;i<len; i++){
+		urls.push(data[i]);
+    }
+    console.log(urls);
+    GetFeedBack(0);
+});
